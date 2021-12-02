@@ -352,8 +352,7 @@ class TerminalReporter:
 
     @property
     def verbosity(self) -> int:
-        verbosity: int = self.config.option.verbose
-        return verbosity
+        return self.config.option.verbose
 
     @property
     def showheader(self) -> bool:
@@ -526,12 +525,10 @@ class TerminalReporter:
             was_xfail = hasattr(report, "wasxfail")
             if rep.passed and not was_xfail:
                 markup = {"green": True}
-            elif rep.passed and was_xfail:
+            elif rep.passed or not rep.failed and rep.skipped:
                 markup = {"yellow": True}
             elif rep.failed:
                 markup = {"red": True}
-            elif rep.skipped:
-                markup = {"yellow": True}
             else:
                 markup = {}
         if self.verbosity <= 0:
@@ -944,18 +941,19 @@ class TerminalReporter:
             )
 
     def summary_passes(self) -> None:
-        if self.config.option.tbstyle != "no":
-            if self.hasopt("P"):
-                reports: List[TestReport] = self.getreports("passed")
-                if not reports:
-                    return
-                self.write_sep("=", "PASSES")
-                for rep in reports:
-                    if rep.sections:
-                        msg = self._getfailureheadline(rep)
-                        self.write_sep("_", msg, green=True, bold=True)
-                        self._outrep_summary(rep)
-                    self._handle_teardown_sections(rep.nodeid)
+        if self.config.option.tbstyle == "no":
+            return
+        if self.hasopt("P"):
+            reports: List[TestReport] = self.getreports("passed")
+            if not reports:
+                return
+            self.write_sep("=", "PASSES")
+            for rep in reports:
+                if rep.sections:
+                    msg = self._getfailureheadline(rep)
+                    self.write_sep("_", msg, green=True, bold=True)
+                    self._outrep_summary(rep)
+                self._handle_teardown_sections(rep.nodeid)
 
     def _get_teardown_reports(self, nodeid: str) -> List[TestReport]:
         reports = self.getreports("")
@@ -983,36 +981,37 @@ class TerminalReporter:
                 self._tw.line(content)
 
     def summary_failures(self) -> None:
-        if self.config.option.tbstyle != "no":
-            reports: List[BaseReport] = self.getreports("failed")
-            if not reports:
-                return
-            self.write_sep("=", "FAILURES")
+        if self.config.option.tbstyle == "no":
+            return
+        reports: List[BaseReport] = self.getreports("failed")
+        if not reports:
+            return
+        self.write_sep("=", "FAILURES")
+        for rep in reports:
             if self.config.option.tbstyle == "line":
-                for rep in reports:
-                    line = self._getcrashline(rep)
-                    self.write_line(line)
+                line = self._getcrashline(rep)
+                self.write_line(line)
             else:
-                for rep in reports:
-                    msg = self._getfailureheadline(rep)
-                    self.write_sep("_", msg, red=True, bold=True)
-                    self._outrep_summary(rep)
-                    self._handle_teardown_sections(rep.nodeid)
-
-    def summary_errors(self) -> None:
-        if self.config.option.tbstyle != "no":
-            reports: List[BaseReport] = self.getreports("error")
-            if not reports:
-                return
-            self.write_sep("=", "ERRORS")
-            for rep in self.stats["error"]:
                 msg = self._getfailureheadline(rep)
-                if rep.when == "collect":
-                    msg = "ERROR collecting " + msg
-                else:
-                    msg = f"ERROR at {rep.when} of {msg}"
                 self.write_sep("_", msg, red=True, bold=True)
                 self._outrep_summary(rep)
+                self._handle_teardown_sections(rep.nodeid)
+
+    def summary_errors(self) -> None:
+        if self.config.option.tbstyle == "no":
+            return
+        reports: List[BaseReport] = self.getreports("error")
+        if not reports:
+            return
+        self.write_sep("=", "ERRORS")
+        for rep in self.stats["error"]:
+            msg = self._getfailureheadline(rep)
+            if rep.when == "collect":
+                msg = "ERROR collecting " + msg
+            else:
+                msg = f"ERROR at {rep.when} of {msg}"
+            self.write_sep("_", msg, red=True, bold=True)
+            self._outrep_summary(rep)
 
     def _outrep_summary(self, rep: BaseReport) -> None:
         rep.toterminal(self._tw)
@@ -1143,21 +1142,23 @@ class TerminalReporter:
     def _determine_main_color(self, unknown_type_seen: bool) -> str:
         stats = self.stats
         if "failed" in stats or "error" in stats:
-            main_color = "red"
+            return "red"
         elif "warnings" in stats or "xpassed" in stats or unknown_type_seen:
-            main_color = "yellow"
+            return "yellow"
         elif "passed" in stats or not self._is_last_item:
-            main_color = "green"
+            return "green"
         else:
-            main_color = "yellow"
-        return main_color
+            return "yellow"
 
     def _set_main_color(self) -> None:
         unknown_types: List[str] = []
         for found_type in self.stats.keys():
-            if found_type:  # setup/teardown reports have an empty key, ignore them
-                if found_type not in KNOWN_TYPES and found_type not in unknown_types:
-                    unknown_types.append(found_type)
+            if (
+                found_type
+                and found_type not in KNOWN_TYPES
+                and found_type not in unknown_types
+            ):
+                unknown_types.append(found_type)
         self._known_types = list(KNOWN_TYPES) + unknown_types
         self._main_color = self._determine_main_color(bool(unknown_types))
 
@@ -1244,8 +1245,7 @@ class TerminalReporter:
 
 
 def _get_pos(config: Config, rep: BaseReport):
-    nodeid = config.cwd_relative_nodeid(rep.nodeid)
-    return nodeid
+    return config.cwd_relative_nodeid(rep.nodeid)
 
 
 def _format_trimmed(format: str, msg: str, available_width: int) -> Optional[str]:
@@ -1368,9 +1368,8 @@ def format_session_duration(seconds: float) -> str:
     """Format the given seconds in a human readable manner to show in the final summary."""
     if seconds < 60:
         return f"{seconds:.2f}s"
-    else:
-        dt = datetime.timedelta(seconds=int(seconds))
-        return f"{seconds:.2f}s ({dt})"
+    dt = datetime.timedelta(seconds=int(seconds))
+    return f"{seconds:.2f}s ({dt})"
 
 
 def _get_raw_skip_reason(report: TestReport) -> str:
@@ -1382,7 +1381,6 @@ def _get_raw_skip_reason(report: TestReport) -> str:
         reason = cast(str, report.wasxfail)
         if reason.startswith("reason: "):
             reason = reason[len("reason: ") :]
-        return reason
     else:
         assert report.skipped
         assert isinstance(report.longrepr, tuple)
@@ -1391,4 +1389,5 @@ def _get_raw_skip_reason(report: TestReport) -> str:
             reason = reason[len("Skipped: ") :]
         elif reason == "Skipped":
             reason = ""
-        return reason
+
+    return reason

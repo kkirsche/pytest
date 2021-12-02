@@ -185,11 +185,7 @@ class TestGeneralUsage:
         result = pytester.runpytest(p1, p2)
         assert result.ret == ExitCode.USAGE_ERROR
         result.stderr.fnmatch_lines(
-            [
-                f"ERROR: not found: {p2}",
-                f"(no name {str(p2)!r} in any of [[][]])",
-                "",
-            ]
+            [f"ERROR: not found: {p2}", f'(no name {p2!r} in any of [[][]])', ""]
         )
 
     @pytest.mark.filterwarnings("default")

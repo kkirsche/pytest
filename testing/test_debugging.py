@@ -257,7 +257,7 @@ class TestPDB:
         """
         )
         child = pytester.spawn_pytest(f"--show-capture={showcapture} --pdb {p1}")
-        if showcapture in ("all", "log"):
+        if showcapture in {"all", "log"}:
             child.expect("captured log")
             child.expect("get rekt")
         child.expect("Pdb")
@@ -1005,10 +1005,7 @@ class TestDebuggingBreakpoints:
     @pytest.mark.skipif(
         not SUPPORTS_BREAKPOINT_BUILTIN, reason="Requires breakpoint() builtin"
     )
-    @pytest.mark.skipif(
-        not _ENVIRON_PYTHONBREAKPOINT == "",
-        reason="Requires breakpoint() default value",
-    )
+    @pytest.mark.skipif(_ENVIRON_PYTHONBREAKPOINT != "", reason="Requires breakpoint() default value")
     def test_sys_breakpoint_interception(self, pytester: Pytester) -> None:
         p1 = pytester.makepyfile(
             """

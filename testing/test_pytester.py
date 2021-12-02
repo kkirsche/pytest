@@ -25,7 +25,7 @@ def test_make_hook_recorder(pytester: Pytester) -> None:
     assert not recorder.getfailures()
 
     # (The silly condition is to fool mypy that the code below this is reachable)
-    if 1 + 1 == 2:
+    if 1 == 1:
         pytest.xfail("internal reportrecorder tests need refactoring")
 
     class rep:
@@ -576,7 +576,7 @@ def test_linematcher_no_matching(function: str) -> None:
     )
 
     # check the function twice to ensure we don't accumulate the internal buffer
-    for i in range(2):
+    for _ in range(2):
         with pytest.raises(pytest.fail.Exception) as e:
             func = getattr(lm, function)
             func(good_pattern)

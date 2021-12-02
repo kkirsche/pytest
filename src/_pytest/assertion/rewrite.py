@@ -215,10 +215,9 @@ class AssertionRewritingHook(importlib.abc.MetaPathFinder, importlib.abc.Loader)
             state.trace(f"rewriting conftest file: {fn!r}")
             return True
 
-        if self.session is not None:
-            if self.session.isinitpath(absolutepath(fn)):
-                state.trace(f"matched test file (was specified on cmdline): {fn!r}")
-                return True
+        if self.session is not None and self.session.isinitpath(absolutepath(fn)):
+            state.trace(f"matched test file (was specified on cmdline): {fn!r}")
+            return True
 
         # modules not passed explicitly on the command line are only
         # rewritten if they match the naming convention for test files
@@ -515,7 +514,7 @@ def _call_assertion_pass(lineno: int, orig: str, expl: str) -> None:
 def _check_if_assertion_pass_impl() -> bool:
     """Check if any plugins implement the pytest_assertion_pass hook
     in order not to generate explanation unecessarily (might be expensive)."""
-    return True if util._assertion_pass else False
+    return bool(util._assertion_pass)
 
 
 UNARY_MAP = {ast.Not: "not %s", ast.Invert: "~%s", ast.USub: "-%s", ast.UAdd: "+%s"}
@@ -701,12 +700,10 @@ class AssertionRewriter(ast.NodeVisitor):
                     return
                 expect_docstring = False
             elif (
-                isinstance(item, ast.ImportFrom)
-                and item.level == 0
-                and item.module == "__future__"
+                not isinstance(item, ast.ImportFrom)
+                or item.level != 0
+                or item.module != "__future__"
             ):
-                pass
-            else:
                 break
             pos += 1
         # Special case: for a decorated function, set the lineno to that of the
@@ -897,8 +894,7 @@ class AssertionRewriter(ast.NodeVisitor):
             fmt = self.helper("_format_explanation", err_msg)
             exc = ast.Call(err_name, [fmt], [])
             raise_ = ast.Raise(exc, None)
-            statements_fail = []
-            statements_fail.extend(self.expl_stmts)
+            statements_fail = list(self.expl_stmts)
             statements_fail.append(raise_)
 
             # Passed
@@ -1105,12 +1101,10 @@ def try_makedirs(cache_dir: Path) -> bool:
     """
     try:
         os.makedirs(cache_dir, exist_ok=True)
-    except (FileNotFoundError, NotADirectoryError, FileExistsError):
+    except (FileNotFoundError, NotADirectoryError, FileExistsError, PermissionError):
         # One of the path components was not a directory:
         # - we're in a zip file
         # - it is a file
-        return False
-    except PermissionError:
         return False
     except OSError as e:
         # as of now, EROFS doesn't have an equivalent OSError-subclass

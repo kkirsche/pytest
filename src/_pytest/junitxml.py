@@ -74,9 +74,10 @@ def merge_family(left, right) -> None:
     left.update(result)
 
 
-families = {}
-families["_base"] = {"testcase": ["classname", "name"]}
-families["_base_legacy"] = {"testcase": ["file", "line", "url"]}
+families = {
+    '_base': {"testcase": ["classname", "name"]},
+    '_base_legacy': {"testcase": ["file", "line", "url"]},
+}
 
 # xUnit 1.x inherits legacy attributes.
 families["xunit1"] = families["_base"].copy()
@@ -140,10 +141,12 @@ class _NodeReporter:
 
         # Filter out attributes not permitted by this test family.
         # Including custom attributes because they are not valid here.
-        temp_attrs = {}
-        for key in self.attrs.keys():
-            if key in families[self.family]["testcase"]:
-                temp_attrs[key] = self.attrs[key]
+        temp_attrs = {
+            key: self.attrs[key]
+            for key in self.attrs
+            if key in families[self.family]["testcase"]
+        }
+
         self.attrs = temp_attrs
 
     def to_xml(self) -> ET.Element:
@@ -202,10 +205,7 @@ class _NodeReporter:
             reprcrash: Optional[ReprFileLocation] = getattr(
                 report.longrepr, "reprcrash", None
             )
-            if reprcrash is not None:
-                message = reprcrash.message
-            else:
-                message = str(report.longrepr)
+            message = reprcrash.message if reprcrash is not None else str(report.longrepr)
             message = bin_xml_escape(message)
             self._add_simple("failure", message, str(report.longrepr))
 
@@ -222,11 +222,7 @@ class _NodeReporter:
         reprcrash: Optional[ReprFileLocation] = getattr(
             report.longrepr, "reprcrash", None
         )
-        if reprcrash is not None:
-            reason = reprcrash.message
-        else:
-            reason = str(report.longrepr)
-
+        reason = reprcrash.message if reprcrash is not None else str(report.longrepr)
         if report.when == "teardown":
             msg = f'failed on teardown with "{reason}"'
         else:

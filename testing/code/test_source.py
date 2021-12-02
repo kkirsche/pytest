@@ -89,7 +89,7 @@ class TestAccesses:
         )
 
     def test_getrange(self) -> None:
-        x = self.source[0:2]
+        x = self.source[:2]
         assert len(x.lines) == 2
         assert str(x) == "def f(x):\n    pass"
 

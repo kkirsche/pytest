@@ -408,12 +408,10 @@ def configure_logging(app: "sphinx.application.Sphinx") -> None:
             """Ignore warnings about missing include with "only" directive.
 
             Ref: https://github.com/sphinx-doc/sphinx/issues/2150."""
-            if (
-                record.msg.startswith('Problems with "include" directive path:')
-                and "_changelog_towncrier_draft.rst" in record.msg
-            ):
-                return False
-            return True
+            return (
+                not record.msg.startswith('Problems with "include" directive path:')
+                or "_changelog_towncrier_draft.rst" not in record.msg
+            )
 
     logger = logging.getLogger(sphinx.util.logging.NAMESPACE)
     warn_handler = [x for x in logger.handlers if x.level == logging.WARNING]

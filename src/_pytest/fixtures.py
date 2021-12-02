@@ -1083,15 +1083,11 @@ def resolve_fixture_function(
     """Get the actual callable that can be called to obtain the fixture
     value, dealing with unittest-specific instances and bound methods."""
     fixturefunc = fixturedef.func
-    if fixturedef.unittest:
-        if request.instance is not None:
+    if request.instance is not None:
+        if fixturedef.unittest:
             # Bind the unbound method to the TestCase instance.
             fixturefunc = fixturedef.func.__get__(request.instance)  # type: ignore[union-attr]
-    else:
-        # The fixture function needs to be bound to the actual
-        # request.instance so that code working with "fixturedef" behaves
-        # as expected.
-        if request.instance is not None:
+        else:
             # Handle the case where fixture is defined not in a test class, but some other class
             # (for example a plugin class with a fixture), see #2270.
             if hasattr(fixturefunc, "__self__") and not isinstance(

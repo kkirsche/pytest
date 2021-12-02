@@ -128,11 +128,9 @@ def pytest_collect_file(
         if config.option.doctestmodules and not any(
             (_is_setup_py(fspath), _is_main_py(fspath))
         ):
-            mod: DoctestModule = DoctestModule.from_parent(parent, path=fspath)
-            return mod
+            return DoctestModule.from_parent(parent, path=fspath)
     elif _is_doctest(config, fspath, parent):
-        txt: DoctestTextfile = DoctestTextfile.from_parent(parent, path=fspath)
-        return txt
+        return DoctestTextfile.from_parent(parent, path=fspath)
     return None
 
 
@@ -331,10 +329,7 @@ class DoctestItem(pytest.Item):
             example = failure.example
             test = failure.test
             filename = test.filename
-            if test.lineno is None:
-                lineno = None
-            else:
-                lineno = test.lineno + example.lineno + 1
+            lineno = None if test.lineno is None else test.lineno + example.lineno + 1
             message = type(failure).__name__
             # TODO: ReprFileLocation doesn't expect a None lineno.
             reprlocation = ReprFileLocation(filename, lineno, message)  # type: ignore[arg-type]
@@ -403,11 +398,8 @@ def get_optionflags(parent):
 
 def _get_continue_on_failure(config):
     continue_on_failure = config.getvalue("doctest_continue_on_failure")
-    if continue_on_failure:
-        # We need to turn off this if we use pdb since we should stop at
-        # the first failure.
-        if config.getvalue("usepdb"):
-            continue_on_failure = False
+    if continue_on_failure and config.getvalue("usepdb"):
+        continue_on_failure = False
     return continue_on_failure
 
 

@@ -612,11 +612,7 @@ class TestConfigAPI:
 
     @pytest.mark.parametrize("maybe_type", ["not passed", "None", '"string"'])
     def test_addini(self, pytester: Pytester, maybe_type: str) -> None:
-        if maybe_type == "not passed":
-            type_string = ""
-        else:
-            type_string = f", {maybe_type}"
-
+        type_string = "" if maybe_type == "not passed" else f", {maybe_type}"
         pytester.makeconftest(
             f"""
             def pytest_addoption(parser):

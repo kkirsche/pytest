@@ -315,7 +315,6 @@ class TestReport(BaseReport):
         duration = call.duration
         keywords = {x: 1 for x in item.keywords}
         excinfo = call.excinfo
-        sections = []
         if not call.excinfo:
             outcome: Literal["passed", "failed", "skipped"] = "passed"
             longrepr: Union[
@@ -325,29 +324,31 @@ class TestReport(BaseReport):
                 str,
                 TerminalRepr,
             ] = None
-        else:
-            if not isinstance(excinfo, ExceptionInfo):
-                outcome = "failed"
-                longrepr = excinfo
-            elif isinstance(excinfo.value, skip.Exception):
-                outcome = "skipped"
-                r = excinfo._getreprcrash()
-                if excinfo.value._use_item_location:
-                    path, line = item.reportinfo()[:2]
-                    assert line is not None
-                    longrepr = os.fspath(path), line + 1, r.message
-                else:
-                    longrepr = (str(r.path), r.lineno, r.message)
+        elif not isinstance(excinfo, ExceptionInfo):
+            outcome = "failed"
+            longrepr = excinfo
+        elif isinstance(excinfo.value, skip.Exception):
+            outcome = "skipped"
+            r = excinfo._getreprcrash()
+            if excinfo.value._use_item_location:
+                path, line = item.reportinfo()[:2]
+                assert line is not None
+                longrepr = os.fspath(path), line + 1, r.message
             else:
-                outcome = "failed"
-                if call.when == "call":
-                    longrepr = item.repr_failure(excinfo)
-                else:  # exception in setup or teardown
-                    longrepr = item._repr_failure_py(
-                        excinfo, style=item.config.getoption("tbstyle", "auto")
-                    )
-        for rwhen, key, content in item._report_sections:
-            sections.append((f"Captured {key} {rwhen}", content))
+                longrepr = (str(r.path), r.lineno, r.message)
+        else:
+            outcome = "failed"
+            if call.when == "call":
+                longrepr = item.repr_failure(excinfo)
+            else:  # exception in setup or teardown
+                longrepr = item._repr_failure_py(
+                    excinfo, style=item.config.getoption("tbstyle", "auto")
+                )
+        sections = [
+            (f"Captured {key} {rwhen}", content)
+            for rwhen, key, content in item._report_sections
+        ]
+
         return cls(
             item.nodeid,
             item.location,
@@ -458,8 +459,7 @@ def _report_to_json(report: BaseReport) -> Dict[str, Any]:
         for key, value in data.items():
             if hasattr(value, "__dict__"):
                 data[key] = attr.asdict(value)
-        entry_data = {"type": type(entry).__name__, "data": data}
-        return entry_data
+        return {"type": type(entry).__name__, "data": data}
 
     def serialize_repr_traceback(reprtraceback: ReprTraceback) -> Dict[str, Any]:
         result = attr.asdict(reprtraceback)

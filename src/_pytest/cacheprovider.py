@@ -237,7 +237,7 @@ class LFPluginCollWrapper:
 
                 # Only filter with known failures.
                 if not self._collected_at_least_one_failure:
-                    if not any(x.nodeid in lastfailed for x in result):
+                    if all(x.nodeid not in lastfailed for x in result):
                         return
                     self.lfplugin.config.pluginmanager.register(
                         LFPluginCollSkipfiles(self.lfplugin), "lfplugin-collskip"
@@ -269,13 +269,16 @@ class LFPluginCollSkipfiles:
         # Packages are Modules, but _last_failed_paths only contains
         # test-bearing paths and doesn't try to include the paths of their
         # packages, so don't filter them.
-        if isinstance(collector, Module) and not isinstance(collector, Package):
-            if collector.path not in self.lfplugin._last_failed_paths:
-                self.lfplugin._skipped_files += 1
+        if (
+            isinstance(collector, Module)
+            and not isinstance(collector, Package)
+            and collector.path not in self.lfplugin._last_failed_paths
+        ):
+            self.lfplugin._skipped_files += 1
 
-                return CollectReport(
-                    collector.nodeid, "passed", longrepr=None, result=[]
-                )
+            return CollectReport(
+                collector.nodeid, "passed", longrepr=None, result=[]
+            )
         return None
 
 

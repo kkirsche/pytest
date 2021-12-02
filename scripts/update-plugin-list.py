@@ -52,11 +52,8 @@ def iter_plugins():
     regex = r">([\d\w-]*)</a>"
     response = requests.get("https://pypi.org/simple")
 
-    matches = list(
-        match
-        for match in re.finditer(regex, response.text)
-        if match.groups()[0].startswith("pytest-")
-    )
+    matches = [match for match in re.finditer(regex, response.text)
+            if match.groups()[0].startswith("pytest-")]
 
     for match in tqdm(matches, smoothing=0):
         name = match.groups()[0]

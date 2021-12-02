@@ -402,7 +402,7 @@ class PytestPluginManager(PluginManager):
             return
 
         # Collect unmarked hooks as long as they have the `pytest_' prefix.
-        if opts is None and name.startswith("pytest_"):
+        if opts is None:
             opts = {}
         if opts is not None:
             # TODO: DeprecationWarning, people should use hookimpl
@@ -415,19 +415,18 @@ class PytestPluginManager(PluginManager):
 
     def parse_hookspec_opts(self, module_or_class, name: str):
         opts = super().parse_hookspec_opts(module_or_class, name)
-        if opts is None:
+        if opts is None and name.startswith("pytest_"):
             method = getattr(module_or_class, name)
 
-            if name.startswith("pytest_"):
-                # todo: deprecate hookspec hacks
-                # https://github.com/pytest-dev/pytest/issues/4562
-                known_marks = {m.name for m in getattr(method, "pytestmark", [])}
-                opts = {
-                    "firstresult": hasattr(method, "firstresult")
-                    or "firstresult" in known_marks,
-                    "historic": hasattr(method, "historic")
-                    or "historic" in known_marks,
-                }
+            # todo: deprecate hookspec hacks
+            # https://github.com/pytest-dev/pytest/issues/4562
+            known_marks = {m.name for m in getattr(method, "pytestmark", [])}
+            opts = {
+                "firstresult": hasattr(method, "firstresult")
+                or "firstresult" in known_marks,
+                "historic": hasattr(method, "historic")
+                or "historic" in known_marks,
+            }
         return opts
 
     def register(
@@ -454,9 +453,7 @@ class PytestPluginManager(PluginManager):
         return ret
 
     def getplugin(self, name: str):
-        # Support deprecated naming because plugins (xdist e.g.) use it.
-        plugin: Optional[_PluggyPlugin] = self.get_plugin(name)
-        return plugin
+        return self.get_plugin(name)
 
     def hasplugin(self, name: str) -> bool:
         """Return whether a plugin with the given name is registered."""
@@ -530,11 +527,7 @@ class PytestPluginManager(PluginManager):
         if self._noconftest:
             return []
 
-        if path.is_file():
-            directory = path.parent
-        else:
-            directory = path
-
+        directory = path.parent if path.is_file() else path
         # Optimization: avoid repeated searches in the same directory.
         # Assumes always called with same importmode and rootpath.
         existing_clist = self._dirpath2confmods.get(directory)
@@ -680,9 +673,11 @@ class PytestPluginManager(PluginManager):
             # There is no interface with pluggy for this.
             if self._name2plugin.get(name, -1) is None:
                 del self._name2plugin[name]
-            if not name.startswith("pytest_"):
-                if self._name2plugin.get("pytest_" + name, -1) is None:
-                    del self._name2plugin["pytest_" + name]
+            if (
+                not name.startswith("pytest_")
+                and self._name2plugin.get("pytest_" + name, -1) is None
+            ):
+                del self._name2plugin["pytest_" + name]
             self.import_plugin(arg, consider_entry_points=True)
 
     def consider_conftest(self, conftestmodule: types.ModuleType) -> None:
@@ -1060,9 +1055,8 @@ class Config:
         for name in opt._short_opts + opt._long_opts:
             self._opt2dest[name] = opt.dest
 
-        if hasattr(opt, "default"):
-            if not hasattr(self.option, opt.dest):
-                setattr(self.option, opt.dest, opt.default)
+        if hasattr(opt, "default") and not hasattr(self.option, opt.dest):
+            setattr(self.option, opt.dest, opt.default)
 
     @hookimpl(trylast=True)
     def pytest_load_initial_conftests(self, early_config: "Config") -> None:
@@ -1295,11 +1289,10 @@ class Config:
             args = self._parser.parse_setoption(
                 args, self.option, namespace=self.option
             )
+            if not args and self.invocation_params.dir == self.rootpath:
+                args = self.getini("testpaths")
             if not args:
-                if self.invocation_params.dir == self.rootpath:
-                    args = self.getini("testpaths")
-                if not args:
-                    args = [str(self.invocation_params.dir)]
+                args = [str(self.invocation_params.dir)]
             self.args = args
         except PrintHelp:
             pass

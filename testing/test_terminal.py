@@ -44,9 +44,7 @@ class Option:
 
     @property
     def args(self):
-        values = []
-        values.append("--verbosity=%d" % self.verbosity)
-        return values
+        return ["--verbosity=%d" % self.verbosity]
 
 
 @pytest.fixture(
@@ -2317,17 +2315,7 @@ def test_line_with_reprcrash(monkeypatch: MonkeyPatch) -> None:
     check("🉐🉐🉐🉐🉐\n2nd line", 80, "FAILED nodeid::🉐::withunicode - 🉐🉐🉐🉐🉐")
 
 
-@pytest.mark.parametrize(
-    "seconds, expected",
-    [
-        (10.0, "10.00s"),
-        (10.34, "10.34s"),
-        (59.99, "59.99s"),
-        (60.55, "60.55s (0:01:00)"),
-        (123.55, "123.55s (0:02:03)"),
-        (60 * 60 + 0.5, "3600.50s (1:00:00)"),
-    ],
-)
+@pytest.mark.parametrize("seconds, expected", [(10.0, "10.00s"), (10.34, "10.34s"), (59.99, "59.99s"), (60.55, "60.55s (0:01:00)"), (123.55, "123.55s (0:02:03)"), (60**2 + 0.5, "3600.50s (1:00:00)")])
 def test_format_session_duration(seconds, expected):
     from _pytest.terminal import format_session_duration
 

@@ -513,8 +513,7 @@ class TestLastFailed:
             pytester.runpytest("-q")
             config = pytester.parseconfigure()
             assert config.cache is not None
-            lastfailed = config.cache.get("cache/lastfailed", -1)
-            return lastfailed
+            return config.cache.get("cache/lastfailed", -1)
 
         lastfailed = rlf(fail_import=0, fail_run=0)
         assert lastfailed == -1

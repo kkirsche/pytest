@@ -52,9 +52,7 @@ def pytest_pycollect_makeitem(
             return None
     except Exception:
         return None
-    # Yes, so let's collect it.
-    item: UnitTestCase = UnitTestCase.from_parent(collector, name=name, obj=obj)
-    return item
+    return UnitTestCase.from_parent(collector, name=name, obj=obj)
 
 
 class UnitTestCase(Class):
@@ -332,13 +330,12 @@ class TestCaseFunction(Function):
 
 @hookimpl(tryfirst=True)
 def pytest_runtest_makereport(item: Item, call: CallInfo[None]) -> None:
-    if isinstance(item, TestCaseFunction):
-        if item._excinfo:
-            call.excinfo = item._excinfo.pop(0)
-            try:
-                del call.result
-            except AttributeError:
-                pass
+    if isinstance(item, TestCaseFunction) and item._excinfo:
+        call.excinfo = item._excinfo.pop(0)
+        try:
+            del call.result
+        except AttributeError:
+            pass
 
     # Convert unittest.SkipTest to pytest.skip.
     # This is actually only needed for nose, which reuses unittest.SkipTest for

@@ -11,8 +11,7 @@ def freeze_includes() -> List[str]:
     included by cx_freeze."""
     import _pytest
 
-    result = list(_iter_all_modules(_pytest))
-    return result
+    return list(_iter_all_modules(_pytest))
 
 
 def _iter_all_modules(

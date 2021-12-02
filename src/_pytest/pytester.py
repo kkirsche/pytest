@@ -304,8 +304,11 @@ class HookRecorder:
             if call._name == name:
                 del self.calls[i]
                 return call
-        lines = [f"could not find call {name!r}, in:"]
-        lines.extend(["  %s" % x for x in self.calls])
+        lines = [
+            f"could not find call {name!r}, in:",
+            *["  %s" % x for x in self.calls],
+        ]
+
         fail("\n".join(lines))
 
     def getcall(self, name: str) -> RecordedHookCall:
@@ -1131,23 +1134,22 @@ class Pytester:
         capture = _get_multicapture("sys")
         capture.start_capturing()
         try:
+            reprec = self.inline_run(*args, **kwargs)
+        except SystemExit as e:
+            ret = e.args[0]
             try:
-                reprec = self.inline_run(*args, **kwargs)
-            except SystemExit as e:
-                ret = e.args[0]
-                try:
-                    ret = ExitCode(e.args[0])
-                except ValueError:
-                    pass
+                ret = ExitCode(e.args[0])
+            except ValueError:
+                pass
 
-                class reprec:  # type: ignore
-                    ret = ret
+            class reprec:  # type: ignore
+                ret = ret
 
-            except Exception:
-                traceback.print_exc()
+        except Exception:
+            traceback.print_exc()
 
-                class reprec:  # type: ignore
-                    ret = ExitCode(3)
+            class reprec:  # type: ignore
+                ret = ExitCode(3)
 
         finally:
             out, err = capture.readouterr()
@@ -1322,9 +1324,7 @@ class Pytester:
         )
         kw["env"] = env
 
-        if stdin is self.CLOSE_STDIN:
-            kw["stdin"] = subprocess.PIPE
-        elif isinstance(stdin, bytes):
+        if stdin is self.CLOSE_STDIN or isinstance(stdin, bytes):
             kw["stdin"] = subprocess.PIPE
         else:
             kw["stdin"] = stdin

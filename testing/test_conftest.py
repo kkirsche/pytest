@@ -225,12 +225,13 @@ def test_setinitial_conftest_subdirs(pytester: Pytester, name: str) -> None:
     conftest = PytestPluginManager()
     conftest_setinitial(conftest, [sub.parent], confcutdir=pytester.path)
     key = subconftest.resolve()
-    if name not in ("whatever", ".dotdir"):
-        assert key in conftest._conftestpath2mod
-        assert len(conftest._conftestpath2mod) == 1
-    else:
+    if name in {"whatever", ".dotdir"}:
         assert key not in conftest._conftestpath2mod
         assert len(conftest._conftestpath2mod) == 0
+
+    else:
+        assert key in conftest._conftestpath2mod
+        assert len(conftest._conftestpath2mod) == 1
 
 
 def test_conftest_confcutdir(pytester: Pytester) -> None:

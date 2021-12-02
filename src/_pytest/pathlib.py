@@ -35,7 +35,7 @@ from _pytest.compat import assert_never
 from _pytest.outcomes import skip
 from _pytest.warning_types import PytestWarning
 
-LOCK_TIMEOUT = 60 * 60 * 24 * 3
+LOCK_TIMEOUT = 60**2 * 24 * 3
 
 
 _AnyPurePath = TypeVar("_AnyPurePath", bound=PurePath)
@@ -208,7 +208,7 @@ def _force_symlink(
 
 def make_numbered_dir(root: Path, prefix: str, mode: int = 0o700) -> Path:
     """Create a directory with an increased number as suffix for the given prefix."""
-    for i in range(10):
+    for _ in range(10):
         # try up to 10 times to create the folder
         max_existing = max(map(parse_num, find_suffixes(root, prefix)), default=-1)
         new_number = max_existing + 1
@@ -220,11 +220,10 @@ def make_numbered_dir(root: Path, prefix: str, mode: int = 0o700) -> Path:
         else:
             _force_symlink(root, prefix + "current", new_path)
             return new_path
-    else:
-        raise OSError(
-            "could not create numbered dir with prefix "
-            "{prefix} in {root} after 10 tries".format(prefix=prefix, root=root)
-        )
+    raise OSError(
+        "could not create numbered dir with prefix "
+        "{prefix} in {root} after 10 tries".format(prefix=prefix, root=root)
+    )
 
 
 def create_cleanup_lock(p: Path) -> Path:
@@ -354,7 +353,7 @@ def make_numbered_dir_with_cleanup(
 ) -> Path:
     """Create a numbered dir with a cleanup lock and remove old ones."""
     e = None
-    for i in range(10):
+    for _ in range(10):
         try:
             p = make_numbered_dir(root, prefix, mode)
             lock_path = create_cleanup_lock(p)

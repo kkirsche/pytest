@@ -191,17 +191,17 @@ class Node(metaclass=NodeMeta):
         #: The pytest config object.
         if config:
             self.config: Config = config
+        elif not parent:
+            raise TypeError("config or parent must be provided")
         else:
-            if not parent:
-                raise TypeError("config or parent must be provided")
             self.config = parent.config
 
         #: The pytest session this node is part of.
         if session:
             self.session = session
+        elif not parent:
+            raise TypeError("session or parent must be provided")
         else:
-            if not parent:
-                raise TypeError("session or parent must be provided")
             self.session = parent.session
 
         #: Filesystem path where this node was collected from (can be None).
@@ -222,9 +222,9 @@ class Node(metaclass=NodeMeta):
         if nodeid is not None:
             assert "::()" not in nodeid
             self._nodeid = nodeid
+        elif not self.parent:
+            raise TypeError("nodeid or parent must be provided")
         else:
-            if not self.parent:
-                raise TypeError("nodeid or parent must be provided")
             self._nodeid = self.parent.nodeid + "::" + self.name
 
         #: A place where plugins can store information on the node for their
@@ -425,9 +425,8 @@ class Node(metaclass=NodeMeta):
 
         if isinstance(excinfo.value, ConftestImportFailure):
             excinfo = ExceptionInfo.from_exc_info(excinfo.value.excinfo)
-        if isinstance(excinfo.value, fail.Exception):
-            if not excinfo.value.pytrace:
-                style = "value"
+        if isinstance(excinfo.value, fail.Exception) and not excinfo.value.pytrace:
+            style = "value"
         if isinstance(excinfo.value, FixtureLookupError):
             return excinfo.value.formatrepr()
         if self.config.getoption("fulltrace", False):
@@ -446,11 +445,7 @@ class Node(metaclass=NodeMeta):
             else:
                 style = "long"
 
-        if self.config.getoption("verbose", 0) > 1:
-            truncate_locals = False
-        else:
-            truncate_locals = True
-
+        truncate_locals = self.config.getoption("verbose", 0) <= 1
         # excinfo.getrepr() formats paths relative to the CWD if `abspath` is False.
         # It is possible for a fixture/test to change the CWD while this code runs, which
         # would then result in the user seeing confusing paths in the failure message.

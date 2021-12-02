@@ -519,7 +519,7 @@ class MarkGenerator:
                     )
 
                 # Raise a specific error for common misspellings of "parametrize".
-                if name in ["parameterize", "parametrise", "parameterise"]:
+                if name in {"parameterize", "parametrise", "parameterise"}:
                     __tracebackhide__ = True
                     fail(f"Unknown '{name}' mark, did you mean 'parametrize'?")
 

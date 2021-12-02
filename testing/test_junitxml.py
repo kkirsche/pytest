@@ -259,8 +259,7 @@ class TestPython:
 
         def node_reporter_wrapper(s, report):
             report.duration = 1.0
-            reporter = original_node_reporter(s, report)
-            return reporter
+            return original_node_reporter(s, report)
 
         monkeypatch.setattr(LogXML, "node_reporter", node_reporter_wrapper)
 
@@ -698,12 +697,12 @@ class TestPython:
         result, dom = run_and_parse("-o", "junit_logging=%s" % junit_logging)
         node = dom.find_first_by_tag("testsuite")
         tnode = node.find_first_by_tag("testcase")
-        if junit_logging in ["system-err", "out-err", "all"]:
+        if junit_logging in {"system-err", "out-err", "all"}:
             assert len(tnode.find_by_tag("system-err")) == 1
         else:
             assert len(tnode.find_by_tag("system-err")) == 0
 
-        if junit_logging in ["log", "system-out", "out-err", "all"]:
+        if junit_logging in {"log", "system-out", "out-err", "all"}:
             assert len(tnode.find_by_tag("system-out")) == 1
         else:
             assert len(tnode.find_by_tag("system-out")) == 0
@@ -813,7 +812,7 @@ class TestPython:
             assert not node.find_by_tag(
                 "system-out"
             ), "system-out should not be generated"
-        if junit_logging == "system-out":
+        elif junit_logging == "system-out":
             systemout = pnode.find_first_by_tag("system-out")
             assert (
                 "hello-stdout" in systemout.toxml()
@@ -837,7 +836,7 @@ class TestPython:
             assert not node.find_by_tag(
                 "system-err"
             ), "system-err should not be generated"
-        if junit_logging == "system-err":
+        elif junit_logging == "system-err":
             systemerr = pnode.find_first_by_tag("system-err")
             assert (
                 "hello-stderr" in systemerr.toxml()
@@ -866,7 +865,7 @@ class TestPython:
             assert not node.find_by_tag(
                 "system-out"
             ), "system-out should not be generated"
-        if junit_logging == "system-out":
+        elif junit_logging == "system-out":
             systemout = pnode.find_first_by_tag("system-out")
             assert (
                 "hello-stdout" in systemout.toxml()
@@ -896,7 +895,7 @@ class TestPython:
             assert not node.find_by_tag(
                 "system-err"
             ), "system-err should not be generated"
-        if junit_logging == "system-err":
+        elif junit_logging == "system-err":
             systemerr = pnode.find_first_by_tag("system-err")
             assert (
                 "hello-stderr" in systemerr.toxml()
@@ -927,7 +926,7 @@ class TestPython:
             assert not node.find_by_tag(
                 "system-out"
             ), "system-out should not be generated"
-        if junit_logging == "system-out":
+        elif junit_logging == "system-out":
             systemout = pnode.find_first_by_tag("system-out")
             assert "hello-stdout call" in systemout.toxml()
             assert "hello-stdout teardown" in systemout.toxml()
@@ -1017,10 +1016,10 @@ def test_nullbyte(pytester: Pytester, junit_logging: str) -> None:
     pytester.runpytest("--junitxml=%s" % xmlf, "-o", "junit_logging=%s" % junit_logging)
     text = xmlf.read_text()
     assert "\x00" not in text
-    if junit_logging == "system-out":
-        assert "#x00" in text
     if junit_logging == "no":
         assert "#x00" not in text
+    elif junit_logging == "system-out":
+        assert "#x00" in text
 
 
 @pytest.mark.parametrize("junit_logging", ["no", "system-out"])
@@ -1038,10 +1037,10 @@ def test_nullbyte_replace(pytester: Pytester, junit_logging: str) -> None:
     xmlf = pytester.path.joinpath("junit.xml")
     pytester.runpytest("--junitxml=%s" % xmlf, "-o", "junit_logging=%s" % junit_logging)
     text = xmlf.read_text()
-    if junit_logging == "system-out":
-        assert "#x0" in text
     if junit_logging == "no":
         assert "#x0" not in text
+    elif junit_logging == "system-out":
+        assert "#x0" in text
 
 
 def test_invalid_xml_escape() -> None:
@@ -1071,10 +1070,7 @@ def test_invalid_xml_escape() -> None:
 
     for i in invalid:
         got = bin_xml_escape(chr(i))
-        if i <= 0xFF:
-            expected = "#x%02X" % i
-        else:
-            expected = "#x%04X" % i
+        expected = "#x%02X" % i if i <= 0xFF else "#x%04X" % i
         assert got == expected
     for i in valid:
         assert chr(i) == bin_xml_escape(chr(i))
@@ -1353,10 +1349,11 @@ def test_random_report_log_xdist(
     )
     _, dom = run_and_parse("-n2")
     suite_node = dom.find_first_by_tag("testsuite")
-    failed = []
-    for case_node in suite_node.find_by_tag("testcase"):
-        if case_node.find_first_by_tag("failure"):
-            failed.append(case_node["name"])
+    failed = [
+        case_node["name"]
+        for case_node in suite_node.find_by_tag("testcase")
+        if case_node.find_first_by_tag("failure")
+    ]
 
     assert failed == ["test_x[22]"]
 

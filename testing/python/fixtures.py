@@ -2907,7 +2907,7 @@ class TestFixtureMarker:
             )
         )
         reprec = pytester.runpytest("-s")
-        for test in ["test_browser"]:
+        for _ in ["test_browser"]:
             reprec.stdout.fnmatch_lines(["*Finalized*"])
 
     def test_class_scope_with_normal_tests(self, pytester: Pytester) -> None:

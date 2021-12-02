@@ -89,22 +89,21 @@ class Scanner:
                 pos += 1
             else:
                 match = re.match(r"(:?\w|:|\+|-|\.|\[|\]|\\|/)+", input[pos:])
-                if match:
-                    value = match.group(0)
-                    if value == "or":
-                        yield Token(TokenType.OR, value, pos)
-                    elif value == "and":
-                        yield Token(TokenType.AND, value, pos)
-                    elif value == "not":
-                        yield Token(TokenType.NOT, value, pos)
-                    else:
-                        yield Token(TokenType.IDENT, value, pos)
-                    pos += len(value)
-                else:
+                if not match:
                     raise ParseError(
                         pos + 1,
                         f'unexpected character "{input[pos]}"',
                     )
+                value = match.group(0)
+                if value == "or":
+                    yield Token(TokenType.OR, value, pos)
+                elif value == "and":
+                    yield Token(TokenType.AND, value, pos)
+                elif value == "not":
+                    yield Token(TokenType.NOT, value, pos)
+                else:
+                    yield Token(TokenType.IDENT, value, pos)
+                pos += len(value)
         yield Token(TokenType.EOF, "", pos)
 
     def accept(self, type: TokenType, *, reject: bool = False) -> Optional[Token]:
@@ -221,5 +220,4 @@ class Expression:
 
         :returns: Whether the expression matches or not.
         """
-        ret: bool = eval(self.code, {"__builtins__": {}}, MatcherAdapter(matcher))
-        return ret
+        return eval(self.code, {"__builtins__": {}}, MatcherAdapter(matcher))

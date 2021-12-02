@@ -106,12 +106,8 @@ class StepwisePlugin:
                     "Test failed, continuing from this test next run."
                 )
 
-        else:
-            # If the test was actually run and did pass.
-            if report.when == "call":
-                # Remove test from the failed ones, if exists.
-                if report.nodeid == self.lastfailed:
-                    self.lastfailed = None
+        elif report.when == "call" and report.nodeid == self.lastfailed:
+            self.lastfailed = None
 
     def pytest_report_collectionfinish(self) -> Optional[str]:
         if self.config.getoption("verbose") >= 0 and self.report_status:

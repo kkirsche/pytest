@@ -969,7 +969,7 @@ class TestFDCapture:
         assert s == "hello"
 
     def test_simple_many(self, tmpfile: BinaryIO) -> None:
-        for i in range(10):
+        for _ in range(10):
             self.test_simple(tmpfile)
 
     def test_simple_many_check_open_files(self, pytester: Pytester) -> None:
@@ -1232,7 +1232,7 @@ class TestStdCaptureFD(TestStdCapture):
 
     def test_many(self, capfd):
         with lsof_check():
-            for i in range(10):
+            for _ in range(10):
                 cap = StdCaptureFD()
                 cap.start_capturing()
                 cap.stop_capturing()

@@ -208,7 +208,7 @@ class TerminalWriter:
             return source
         else:
             try:
-                highlighted: str = highlight(
+                return highlight(
                     source,
                     PythonLexer(),
                     TerminalFormatter(
@@ -216,7 +216,6 @@ class TerminalWriter:
                         style=os.getenv("PYTEST_THEME"),
                     ),
                 )
-                return highlighted
             except pygments.util.ClassNotFound:
                 raise UsageError(
                     "PYTEST_THEME environment variable had an invalid value: '{}'. "

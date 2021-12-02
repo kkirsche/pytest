@@ -883,7 +883,7 @@ raise ValueError()
         )
         excinfo = pytest.raises(RuntimeError, mod.entry)
 
-        for style in ("short", "long", "no"):
+        for _ in ("short", "long", "no"):
             p = FormattedExcinfo(style="short")
             reprtb = p.repr_traceback(excinfo)
             assert reprtb.extraline == "!!! Recursion detected (same locals & position)"

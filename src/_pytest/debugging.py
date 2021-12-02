@@ -216,11 +216,8 @@ class pytestPDB:
                 breakpoint again.
                 """
                 ret = super().setup(f, tb)
-                if not ret and self._continued:
-                    # pdb.setup() returns True if the command wants to exit
-                    # from the interaction: do not suspend capturing then.
-                    if self._pytest_capman:
-                        self._pytest_capman.suspend_global_capture(in_=True)
+                if not ret and self._continued and self._pytest_capman:
+                    self._pytest_capman.suspend_global_capture(in_=True)
                 return ret
 
             def get_stack(self, f, t):

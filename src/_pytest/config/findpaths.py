@@ -118,15 +118,14 @@ def get_common_ancestor(paths: Iterable[Path]) -> Path:
             continue
         if common_ancestor is None:
             common_ancestor = path
+        elif common_ancestor in path.parents or path == common_ancestor:
+            continue
+        elif path in common_ancestor.parents:
+            common_ancestor = path
         else:
-            if common_ancestor in path.parents or path == common_ancestor:
-                continue
-            elif path in common_ancestor.parents:
-                common_ancestor = path
-            else:
-                shared = commonpath(path, common_ancestor)
-                if shared is not None:
-                    common_ancestor = shared
+            shared = commonpath(path, common_ancestor)
+            if shared is not None:
+                common_ancestor = shared
     if common_ancestor is None:
         common_ancestor = Path.cwd()
     elif common_ancestor.is_file():
@@ -193,10 +192,7 @@ def determine_setup(
                 if dirs != [ancestor]:
                     rootdir, inipath, inicfg = locate_config(dirs)
                 if rootdir is None:
-                    if config is not None:
-                        cwd = config.invocation_params.dir
-                    else:
-                        cwd = Path.cwd()
+                    cwd = config.invocation_params.dir if config is not None else Path.cwd()
                     rootdir = get_common_ancestor([cwd, ancestor])
                     is_fs_root = os.path.splitdrive(str(rootdir))[1] == "/"
                     if is_fs_root:

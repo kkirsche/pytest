@@ -448,7 +448,7 @@ class TestAssertionRewrite:
 
         def f2() -> None:
             x = 1
-            assert x == 1 or x == 2
+            assert x in {1, 2}
 
         getmsg(f2, must_pass=True)
 
@@ -810,16 +810,10 @@ class TestRewriteOnImport:
                 def load():
                     return files(__name__)
                 """,
-                "test_load": f"""
-                pytest_plugins = ["demo"]
-
-                def test_load():
-                    from demo import load
-                    found = {{str(i) for i in load().iterdir() if i.name != "__pycache__"}}
-                    assert found == {{{str(example)!r}, {str(init)!r}}}
-                """,
+                "test_load": f'\x1f                pytest_plugins = ["demo"]\x1f\x1f                def test_load():\x1f                    from demo import load\x1f                    found = {{str(i) for i in load().iterdir() if i.name != "__pycache__"}}\x1f                    assert found == {{{example!r}, {init!r}}}\x1f                ',
             }
         )
+
         example.mkdir()
 
         assert pytester.runpytest("-vv").ret == ExitCode.OK
@@ -1057,7 +1051,6 @@ class TestAssertionRewriteHookDetails:
                 e = OSError()
                 e.errno = 10
                 raise e
-                yield  # type:ignore[unreachable]
 
             monkeypatch.setattr(
                 _pytest.assertion.rewrite, "atomic_write", atomic_write_failed

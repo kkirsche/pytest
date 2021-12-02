@@ -197,14 +197,12 @@ def pytest_pyfunc_call(pyfuncitem: "Function") -> Optional[object]:
 
 def pytest_collect_file(fspath: Path, parent: nodes.Collector) -> Optional["Module"]:
     if fspath.suffix == ".py":
-        if not parent.session.isinitpath(fspath):
-            if not path_matches_patterns(
-                fspath, parent.config.getini("python_files") + ["__init__.py"]
-            ):
-                return None
+        if not parent.session.isinitpath(fspath) and not path_matches_patterns(
+            fspath, parent.config.getini("python_files") + ["__init__.py"]
+        ):
+            return None
         ihook = parent.session.gethookproxy(fspath)
-        module: Module = ihook.pytest_pycollect_makemodule(fspath=fspath, parent=parent)
-        return module
+        return ihook.pytest_pycollect_makemodule(fspath=fspath, parent=parent)
     return None
 
 
@@ -215,10 +213,8 @@ def path_matches_patterns(path: Path, patterns: Iterable[str]) -> bool:
 
 def pytest_pycollect_makemodule(fspath: Path, parent) -> "Module":
     if fspath.name == "__init__.py":
-        pkg: Package = Package.from_parent(parent, path=fspath)
-        return pkg
-    mod: Module = Module.from_parent(parent, path=fspath)
-    return mod
+        return Package.from_parent(parent, path=fspath)
+    return Module.from_parent(parent, path=fspath)
 
 
 @hookimpl(trylast=True)
@@ -679,9 +675,7 @@ class Package(Module):
         if ihook.pytest_ignore_collect(fspath=fspath, config=self.config):
             return False
         norecursepatterns = self.config.getini("norecursedirs")
-        if any(fnmatch_ex(pat, fspath) for pat in norecursepatterns):
-            return False
-        return True
+        return not any(fnmatch_ex(pat, fspath) for pat in norecursepatterns)
 
     def _collectfile(
         self, fspath: Path, handle_dupes: bool = True
@@ -692,9 +686,10 @@ class Package(Module):
             fspath, fspath.is_dir(), fspath.exists(), fspath.is_symlink()
         )
         ihook = self.session.gethookproxy(fspath)
-        if not self.session.isinitpath(fspath):
-            if ihook.pytest_ignore_collect(fspath=fspath, config=self.config):
-                return ()
+        if not self.session.isinitpath(fspath) and ihook.pytest_ignore_collect(
+            fspath=fspath, config=self.config
+        ):
+            return ()
 
         if handle_dupes:
             keepduplicates = self.config.getoption("keepduplicates")
@@ -719,9 +714,12 @@ class Package(Module):
             path = Path(direntry.path)
 
             # We will visit our own __init__.py file, in which case we skip it.
-            if direntry.is_file():
-                if direntry.name == "__init__.py" and path.parent == this_path:
-                    continue
+            if (
+                direntry.is_file()
+                and direntry.name == "__init__.py"
+                and path.parent == this_path
+            ):
+                continue
 
             parts_ = parts(direntry.path)
             if any(
@@ -1203,7 +1201,7 @@ class Metafunc:
             num_ids = len(parameters)
 
         # num_ids == 0 is a special case: https://github.com/pytest-dev/pytest/issues/1849
-        if num_ids != len(parameters) and num_ids != 0:
+        if num_ids not in [len(parameters), 0]:
             msg = "In {}: {} parameter sets specified, with different number of ids: {}"
             fail(msg.format(func_name, len(parameters), num_ids), pytrace=False)
 
@@ -1379,9 +1377,7 @@ def _idval(
     elif isinstance(val, enum.Enum):
         return str(val)
     elif isinstance(getattr(val, "__name__", None), str):
-        # Name of a class, function, module, etc.
-        name: str = getattr(val, "__name__")
-        return name
+        return getattr(val, "__name__")
     return str(argname) + str(idx)
 
 
@@ -1548,11 +1544,10 @@ def _showfixtures_main(config: Config, session: Session) -> None:
     available.sort()
     currentmodule = None
     for baseid, module, prettypath, argname, fixturedef in available:
-        if currentmodule != module:
-            if not module.startswith("_pytest."):
-                tw.line()
-                tw.sep("-", f"fixtures defined from {module}")
-                currentmodule = module
+        if currentmodule != module and not module.startswith("_pytest."):
+            tw.line()
+            tw.sep("-", f"fixtures defined from {module}")
+            currentmodule = module
         if verbose <= 0 and argname.startswith("_"):
             continue
         tw.write(f"{argname}", green=True)
@@ -1712,25 +1707,28 @@ class Function(PyobjMixin, nodes.Item):
         self._request._fillfixtures()
 
     def _prunetraceback(self, excinfo: ExceptionInfo[BaseException]) -> None:
-        if hasattr(self, "_obj") and not self.config.getoption("fulltrace", False):
-            code = _pytest._code.Code.from_function(get_real_func(self.obj))
-            path, firstlineno = code.path, code.firstlineno
-            traceback = excinfo.traceback
-            ntraceback = traceback.cut(path=path, firstlineno=firstlineno)
-            if ntraceback == traceback:
-                ntraceback = ntraceback.cut(path=path)
-                if ntraceback == traceback:
-                    ntraceback = ntraceback.filter(filter_traceback)
-                    if not ntraceback:
-                        ntraceback = traceback
+        if not hasattr(self, "_obj") or self.config.getoption("fulltrace", False):
+            return
+        code = _pytest._code.Code.from_function(get_real_func(self.obj))
+        path, firstlineno = code.path, code.firstlineno
+        traceback = excinfo.traceback
+        ntraceback = traceback.cut(path=path, firstlineno=firstlineno)
+        if ntraceback == traceback:
+            ntraceback = ntraceback.cut(path=path)
+        if ntraceback == traceback:
+            ntraceback = ntraceback.filter(filter_traceback)
+            if not ntraceback:
+                ntraceback = traceback
 
-            excinfo.traceback = ntraceback.filter()
+        excinfo.traceback = ntraceback.filter()
             # issue364: mark all but first and last frames to
             # only show a single-line message for each frame.
-            if self.config.getoption("tbstyle", "auto") == "auto":
-                if len(excinfo.traceback) > 2:
-                    for entry in excinfo.traceback[1:-1]:
-                        entry.set_repr_style("short")
+        if (
+            self.config.getoption("tbstyle", "auto") == "auto"
+            and len(excinfo.traceback) > 2
+        ):
+            for entry in excinfo.traceback[1:-1]:
+                entry.set_repr_style("short")
 
     # TODO: Type ignored -- breaks Liskov Substitution.
     def repr_failure(  # type: ignore[override]

@@ -176,8 +176,7 @@ class TestPaste:
         import urllib.request
 
         def response(url, data):
-            stream = io.BytesIO(b"something bad occurred")
-            return stream
+            return io.BytesIO(b"something bad occurred")
 
         monkeypatch.setattr(urllib.request, "urlopen", response)
         result = pastebin.create_new_paste(b"full-paste-contents")
